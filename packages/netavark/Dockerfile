@@ -6,7 +6,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG PACKAGE
 # renovate: datasource=github-releases depName=containers/netavark
-ARG PACKAGE_VERSION=2.0.0
+ARG PACKAGE_VERSION=2.1.0
 ARG TARGETARCH
 
 ENV BUILD_GOAL=build \
