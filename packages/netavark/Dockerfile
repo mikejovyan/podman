@@ -5,9 +5,9 @@ FROM rust:slim-trixie AS builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG PACKAGE
-ARG TARGETARCH
 # renovate: datasource=github-releases depName=containers/netavark
-ARG VERSION=2.0.0
+ARG PACKAGE_VERSION=2.0.0
+ARG TARGETARCH
 
 ENV BUILD_GOAL=build \
     COPYRIGHT="2021-2026 Netavark contributors" \
@@ -34,7 +34,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 WORKDIR /src
 
-ADD $SOURCE.git#v${VERSION} .
+ADD $SOURCE.git#v${PACKAGE_VERSION} .
 
 RUN make $BUILD_GOAL PREFIX=/usr \
     && make $INSTALL_GOAL PREFIX=/usr DESTDIR=/out
