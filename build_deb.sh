@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # prepare package metadata
-version_clean="${VERSION}-1"
+version_clean="${PACKAGE_VERSION}-1"
 pkg_doc="/out/usr/share/doc/$PACKAGE"
 debian_dir="/out/DEBIAN"
 
