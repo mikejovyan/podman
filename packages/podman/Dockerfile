@@ -6,7 +6,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG PACKAGE
 # renovate: datasource=github-releases depName=podman-container-tools/podman
-ARG PACKAGE_VERSION=6.0.0
+ARG PACKAGE_VERSION=6.1.4
 ARG TARGETARCH
 
 ENV BUILD_GOAL="" \
