@@ -57,15 +57,15 @@ jobs:
 
       - name: Build .deb and extract
         if: matrix.package != 'none'
-        uses: https://data.forgejo.org/docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          file: ./packages/${{ matrix.package }}/Dockerfile
-          target: export
-          platforms: linux/${{ env.ARCH }}
-          build-args: |
-            PACKAGE=${{ matrix.package }}
-          outputs: type=local,dest=out
+        run: |
+          buildah build \
+            --layers \
+            --target export \
+            --platform linux/${{ env.ARCH }} \
+            --build-arg PACKAGE=${{ matrix.package }} \
+            --file ./packages/${{ matrix.package }}/Containerfile \
+            --output type=local,dest=out \
+            .
 
       - name: Publish .deb to the apt repository
         if: matrix.package != 'none' && forgejo.event_name == 'push'

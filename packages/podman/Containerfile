@@ -1,8 +1,14 @@
-# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
-
 FROM golang:trixie AS builder
 
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN --mount=type=cache,id=podman-apt-cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=podman-apt-lists,target=/var/lib/apt,sharing=locked \
+    export DEBIAN_FRONTEND=noninteractive \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && apt-get update \
+    && apt-get install --no-install-recommends --yes \
+        ca-certificates \
+        dpkg-dev \
+        make
 
 ARG PACKAGE
 # renovate: datasource=github-releases depName=podman-container-tools/podman
@@ -20,23 +26,23 @@ ENV BUILD_GOAL="" \
     SOURCE=https://github.com/podman-container-tools/podman \
     SUGGESTS="containernetworking-plugins, iptables"
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+RUN --mount=type=cache,id=podman-apt-cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=podman-apt-lists,target=/var/lib/apt,sharing=locked \
     export DEBIAN_FRONTEND=noninteractive \
-    && rm -f /etc/apt/apt.conf.d/docker-clean \
     && apt-get update \
-    && apt-get install --no-install-recommends --yes \
-        ca-certificates \
-        dpkg-dev \
-        make \
     && apt-get install --no-install-recommends --yes \
         ${REQUIREMENTS}
 
 WORKDIR /src
 
-ADD $SOURCE.git#v${PACKAGE_VERSION} .
+ADD $SOURCE/archive/refs/tags/v${PACKAGE_VERSION}.tar.gz /tmp/src.tar.gz
 
-RUN make $BUILD_GOAL PREFIX=/usr \
+RUN tar xzf /tmp/src.tar.gz -C /src --strip-components=1 \
+    && rm /tmp/src.tar.gz
+
+RUN --mount=type=cache,id=podman-go-build,target=/root/.cache/go-build,sharing=locked \
+    --mount=type=cache,id=podman-go-mod,target=/go/pkg/mod,sharing=locked \
+    make $BUILD_GOAL PREFIX=/usr \
     && make $INSTALL_GOAL PREFIX=/usr DESTDIR=/out
 
 COPY build_deb.sh /usr/local/bin/build_deb.sh
