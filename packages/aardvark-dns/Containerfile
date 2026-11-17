@@ -45,8 +45,8 @@ RUN --mount=type=cache,id=podman-cargo-registry,target=/usr/local/cargo/registry
     make $BUILD_GOAL PREFIX=/usr \
     && make $INSTALL_GOAL PREFIX=/usr DESTDIR=/out
 
-COPY build_deb.sh /usr/local/bin/build_deb.sh
-RUN build_deb.sh
+RUN --mount=type=bind,source=build_deb.sh,target=/build_deb.sh \
+    bash /build_deb.sh
 
 FROM scratch AS export
 COPY --from=builder /out-deb /
