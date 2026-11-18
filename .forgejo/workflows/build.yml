@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - .forgejo/workflows/build.yml
-      - 'packages/**'
+      - Containerfile
   pull_request:
     branches: [main]
 
@@ -14,33 +14,7 @@ concurrency:
   cancel-in-progress: ${{ forgejo.event_name == 'pull_request' }}
 
 jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      # "none" keeps the matrix non-empty, so build-and-push always reports a status
-      packages: ${{ steps.filter.outputs.changes == '[]' && '["none"]' || steps.filter.outputs.changes }}
-    steps:
-      - uses: https://data.forgejo.org/actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      - id: filter
-        uses: https://github.com/dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
-        with:
-          base: ${{ forgejo.event_name == 'push' && forgejo.ref || '' }}
-          filters: |
-            aardvark-dns:
-              - 'packages/aardvark-dns/**'
-              - '.forgejo/workflows/build.yml'
-            netavark:
-              - 'packages/netavark/**'
-              - '.forgejo/workflows/build.yml'
-            podman:
-              - 'packages/podman/**'
-              - '.forgejo/workflows/build.yml'
-
   build-and-publish:
-    needs: detect-changes
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,24 +25,81 @@ jobs:
       DISTRIBUTION: trixie
     strategy:
       matrix:
-        package: ${{ fromJson(needs.detect-changes.outputs.packages) }}
+        package: [aardvark-dns, netavark, podman]
+        include:
+          - package: aardvark-dns
+            base_image: rust:slim-trixie
+            # renovate: datasource=github-releases depName=containers/aardvark-dns
+            package_version: 2.1.0
+            build_goal: build
+            copyright: 2021-2026 Aardvark-dns contributors
+            depends: netavark (>= 2.0.0)
+            description: Container-focused DNS server
+            install_goal: install
+            license: Apache-2.0
+            recommends: ""
+            requirements: ""
+            source: https://github.com/containers/aardvark-dns
+            suggests: ""
+          - package: netavark
+            base_image: rust:slim-trixie
+            # renovate: datasource=github-releases depName=containers/netavark
+            package_version: 2.1.0
+            build_goal: build
+            copyright: 2021-2026 Netavark contributors
+            depends: ""
+            description: Rust based network stack for containers
+            install_goal: install.netavark
+            license: Apache-2.0
+            recommends: aardvark-dns, nftables
+            requirements: protobuf-compiler
+            source: https://github.com/containers/netavark
+            suggests: ""
+          - package: podman
+            base_image: golang:trixie
+            # renovate: datasource=github-releases depName=podman-container-tools/podman
+            package_version: 6.2.0
+            build_goal: ""
+            copyright: 2017-2026 Podman contributors
+            depends: conmon, crun | runc, golang-github-containers-common, netavark (>= 2.0.0~), init-system-helpers (>= 1.52)
+            description: tool to manage containers and pods
+            install_goal: install
+            license: Apache-2.0
+            recommends: catatonit | tini | dumb-init, ca-certificates, dbus-user-session, passt, slirp4netns, uidmap
+            requirements: libapparmor-dev libassuan-dev libglib2.0-dev libgpg-error-dev libgpgme-dev libseccomp-dev libsystemd-dev
+            source: https://github.com/podman-container-tools/podman
+            suggests: containernetworking-plugins, iptables
     steps:
       - uses: https://data.forgejo.org/actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build .deb and extract
-        if: matrix.package != 'none'
-        run: |
-          buildah build \
-            --layers \
-            --target export \
-            --platform linux/${{ env.ARCH }} \
-            --build-arg PACKAGE=${{ matrix.package }} \
-            --file ./packages/${{ matrix.package }}/Containerfile \
-            --output type=local,dest=out \
-            .
+        uses: https://github.com/redhat-actions/buildah-build@f7b0856bcc6a022339d53d47768d8f3678c0a112
+        with:
+          image: ${{ matrix.package }}
+          context: .
+          containerfiles: ./Containerfile
+          layers: true
+          platform: linux/${{ env.ARCH }}
+          build-args: |
+            PACKAGE=${{ matrix.package }}
+            BASE_IMAGE=${{ matrix.base_image }}
+            PACKAGE_VERSION=${{ matrix.package_version }}
+            BUILD_GOAL=${{ matrix.build_goal }}
+            COPYRIGHT=${{ matrix.copyright }}
+            DEPENDS=${{ matrix.depends }}
+            DESCRIPTION=${{ matrix.description }}
+            INSTALL_GOAL=${{ matrix.install_goal }}
+            LICENSE=${{ matrix.license }}
+            RECOMMENDS=${{ matrix.recommends }}
+            REQUIREMENTS=${{ matrix.requirements }}
+            SOURCE=${{ matrix.source }}
+            SUGGESTS=${{ matrix.suggests }}
+          extra-args: |
+            --target=export
+            --output=type=local,dest=out
 
       - name: Publish .deb to the apt repository
-        if: matrix.package != 'none' && forgejo.event_name == 'push'
+        if: forgejo.event_name == 'push'
         run: |
           curl \
             --fail \
