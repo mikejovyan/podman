@@ -5,6 +5,15 @@
     "local>renovate-bot/renovate_config",
     "customManagers:dockerfileVersions",
   ],
+  customManagers: [
+    {
+      customType: "regex",
+      managerFilePatterns: [ "/(^|/)\\.forgejo/workflows/build\\.yml$/" ],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?)\\s+package_version:\\s*[\"']?(?<currentValue>.+?)[\"']?\\s",
+      ],
+    },
+  ],
   packageRules: [
     {
       matchPackageNames: [
