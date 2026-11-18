@@ -100,9 +100,9 @@ jobs:
 
       - name: Publish .deb to the apt repository
         if: forgejo.event_name == 'push'
-        run: |
-          curl \
-            --fail \
-            --user "${{ forgejo.repository_owner }}:${{ secrets.PACKAGE_TOKEN }}" \
-            --upload-file out/*.deb \
-            "${{ forgejo.server_url }}/api/packages/${{ forgejo.repository_owner }}/debian/pool/${{ env.DISTRIBUTION }}/${{ env.COMPONENT }}/upload"
+        uses: ./.forgejo/actions/publish-deb
+        with:
+          file: out/*.deb
+          token: ${{ secrets.PACKAGE_TOKEN }}
+          distribution: ${{ env.DISTRIBUTION }}
+          component: ${{ env.COMPONENT }}

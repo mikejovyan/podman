@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: MIT
+name: 'Publish a .deb to a Forgejo Debian registry'
+author: 'mikejovyan'
+description: |
+  Upload a single .deb file to a Forgejo Debian package registry. Retries
+  on transient failures and treats an already-published version as a
+  successful no-op instead of failing the job.
+inputs:
+  url:
+    description: 'URL of the Forgejo instance'
+    default: '${{ env.FORGEJO_SERVER_URL }}'
+  repo:
+    description: 'owner/project relative to the URL'
+    default: '${{ forgejo.repository }}'
+  token:
+    description: 'Forgejo application token (must have `package:write`)'
+    default: '${{ forgejo.token }}'
+  file:
+    description: 'Path or glob to the .deb file to publish'
+    required: true
+  distribution:
+    description: 'Debian distribution/codename to publish into'
+    required: true
+  component:
+    description: 'Debian component to publish into'
+    default: 'main'
+
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        export FORGEJO="${{ inputs.url }}"
+        # A trailing / will mean http://forgejo//api/v1 is used
+        # and it always 401s, because of the double slash
+        FORGEJO=${FORGEJO%%/}
+
+        export REPO="${{ inputs.repo }}"
+        export OWNER="${REPO%%/*}"
+
+        export TOKEN="${{ inputs.token }}"
+
+        export FILE="${{ inputs.file }}"
+
+        export DISTRIBUTION="${{ inputs.distribution }}"
+
+        export COMPONENT="${{ inputs.component }}"
+
+        response="$(mktemp)"
+        trap "rm -f $response" EXIT
+
+        matches=( $FILE )
+        file="${matches[0]}"
+        upload_url="$FORGEJO/api/packages/$OWNER/debian/pool/$DISTRIBUTION/$COMPONENT/upload"
+
+        status="$(curl \
+          --silent \
+          --show-error \
+          --output "$response" \
+          --write-out '%{http_code}' \
+          --user "$OWNER:$TOKEN" \
+          --retry 5 \
+          --upload-file "$file" \
+          "$upload_url")"
+
+        case "$status" in
+          201)
+            echo "Published $(basename "$file").";;
+          409)
+            echo "$(basename "$file") is already published for this distribution/component/architecture — nothing to do.";;
+          *)
+            echo "::error::Upload failed with HTTP $status"
+            cat "$response"
+            exit 1;;
+        esac
+      shell: bash
