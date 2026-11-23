@@ -25,7 +25,7 @@ jobs:
       DISTRIBUTION: trixie
     strategy:
       matrix:
-        package: [aardvark-dns, netavark, podman]
+        package: [aardvark-dns, conmon, netavark, podman]
         include:
           - package: aardvark-dns
             base_image: docker.io/library/rust:latest
@@ -40,6 +40,20 @@ jobs:
             recommends: ""
             requirements: ""
             source: https://github.com/containers/aardvark-dns
+            suggests: ""
+          - package: conmon
+            base_image: docker.io/library/debian:trixie-slim
+            # renovate: datasource=github-releases depName=containers/conmon
+            package_version: 2.2.1
+            build_goal: ""
+            copyright: 2016-2026 Conmon contributors
+            depends: ""
+            description: OCI container runtime monitor
+            install_goal: install.bin
+            license: Apache-2.0
+            recommends: ""
+            requirements: build-essential meson ninja-build pkg-config libglib2.0-dev libseccomp-dev libcap-dev libsystemd-dev
+            source: https://github.com/containers/conmon
             suggests: ""
           - package: netavark
             base_image: docker.io/library/rust:latest
