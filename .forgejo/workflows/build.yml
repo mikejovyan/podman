@@ -28,7 +28,7 @@ jobs:
         package: [aardvark-dns, conmon, netavark, podman]
         include:
           - package: aardvark-dns
-            base_image: docker.io/library/rust:latest
+            base_image: docker.io/library/rust:slim-trixie
             # renovate: datasource=github-releases depName=containers/aardvark-dns
             package_version: 2.1.0
             build_goal: build
@@ -56,7 +56,7 @@ jobs:
             source: https://github.com/containers/conmon
             suggests: ""
           - package: netavark
-            base_image: docker.io/library/rust:latest
+            base_image: docker.io/library/rust:slim-trixie
             # renovate: datasource=github-releases depName=containers/netavark
             package_version: 2.1.0
             build_goal: build
