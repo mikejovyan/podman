@@ -72,7 +72,7 @@ jobs:
           - package: podman
             base_image: docker.io/library/golang:latest
             # renovate: datasource=github-releases depName=podman-container-tools/podman
-            package_version: 6.2.0
+            package_version: 6.2.1
             build_goal: ""
             copyright: 2017-2026 Podman contributors
             depends: conmon, crun | runc, golang-github-containers-common, netavark (>= 2.0.0~), init-system-helpers (>= 1.52)
